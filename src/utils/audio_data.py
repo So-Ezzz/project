@@ -1,4 +1,3 @@
-from .compute_features_single import load_audio_file
 import os
 import numpy as np
 from ..model.fft_classifier import *
@@ -228,7 +227,8 @@ class AudioData:
 
         for file in tqdm(audio_files,desc="Loading audios", unit="file"):
             file_path = os.path.join(directory_path, file)
-            audios.append(load_audio_file(file_path))
+            audio, _ = librosa.load(file_path, sr=None,mono=True)
+            audios.append(audio)
             labels.append(file)
 
         return cls(labels=np.array(labels),audios=np.array(audios), is_validation=is_validation)
