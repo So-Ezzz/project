@@ -3,6 +3,7 @@ import os
 import numpy as np
 from ..model.fft_classifier import *
 from ..model.stft_classifier import *
+from ..model.mel_classifier import *
 from ..model.mfcc_classifier import *
 from ..preprocess.fft import *
 from ..preprocess.stft import *
@@ -173,7 +174,7 @@ class Audio:
 
 class AudioData:
     def __init__(self, labels, audios, ffts=None, stfts=None, mels=None, mfccs=None,
-             is_validation=False, fft_top20=None, stft_top20=None, mfcc_top20=None):
+             is_validation=False, fft_top20=None, stft_top20=None, mel_top20=None,mfcc_top20=None):
         """
         初始化 AudioData 对象，用于存储多个音频的标签和特征数据。
 
@@ -198,6 +199,7 @@ class AudioData:
         if is_validation:
             self.fft_top20 = fft_top20 if fft_top20 is not None else {}
             self.stft_top20 = stft_top20 if stft_top20 is not None else {}
+            self.mel_top20 = mel_top20 if mel_top20 is not None else {}
             self.mfcc_top20 = mfcc_top20 if mfcc_top20 is not None else {}
 
     def release_memory(self):
@@ -350,6 +352,21 @@ class AudioData:
             top20_labels = [item[0] for item in top20]
             top20_dict[val_label] = top20_labels
         self.fft_top20 = top20_dict
+
+        # 计算 mel top20的准确率
+    def get_mel_top20(self,Train_Data:'AudioData',f=calculate_euclidean_distance):
+        top20_dict = {}
+        for val_label, val_mel in tqdm(zip(self.labels, self.mels), 
+                                desc="Processing mel Top 20", 
+                                total=len(self.labels)):
+            similarities = []
+            for train_label,train_mel in zip(Train_Data.labels,Train_Data.mels):
+                sim = compute_mel_sim(val_mel, train_mel, f=f)
+                similarities.append((train_label, sim))
+            top20 = sorted(similarities, key=lambda x: x[1], reverse=True)[:20]
+            top20_labels = [item[0] for item in top20]
+            top20_dict[val_label] = top20_labels
+        self.mel_top20 = top20_dict
 
     # 计算 stft top20的准确率
     def get_stft_top20(self):
