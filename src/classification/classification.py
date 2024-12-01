@@ -93,13 +93,13 @@ def norm_lufs(x, lufs=-14.0, clip=1.0):
     gain = gain[:, np.newaxis, np.newaxis]  # 调整增益维度以匹配输入
     print(gain)
     
-    # 应用增益因子
-    x = x * gain  # 批量归一化
-    x = np.clip(x, -clip, clip)  # 削波处理
+    # # 应用增益因子
+    # x = x * gain  # 批量归一化
+    # x = np.clip(x, -clip, clip)  # 削波处理
     
-    # 转换为对数梅尔频谱 (dB)
-    db_spectrogram = librosa.power_to_db(x, ref=np.max)
-    return db_spectrogram
+    # # 转换为对数梅尔频谱 (dB)
+    # db_spectrogram = librosa.power_to_db(x, ref=np.max)
+    return x ** 2
 
 
 
