@@ -33,8 +33,8 @@ class Audio_Dataset(Dataset):
 def save_data(train_loader:DataLoader, test_loader, save_dir):
     os.makedirs(save_dir, exist_ok=True)
     
-    train_data = {"images": train_loader.dataset.mels, "labels": train_loader.dataset.labels}
-    test_data = {"images": test_loader.dataset.images, "labels": test_loader.dataset.labels}
+    train_data = {"mels": train_loader.dataset.mels, "labels": train_loader.dataset.labels}
+    test_data = {"mels": test_loader.dataset.mels, "labels": test_loader.dataset.labels}
     torch.save(train_data, os.path.join(save_dir, "train_data.pt"))
     torch.save(test_data, os.path.join(save_dir, "test_data.pt"))
 
@@ -77,8 +77,8 @@ def get_loader(window_size, hop_size, num_mel_bins, width, height, batch_size=32
     test_labels = Val_data.labels
     
     # 创建 PyTorch 数据集
-    train_dataset = Audio_Dataset(train_images, train_labels, width, height)
-    test_dataset = Audio_Dataset(test_images, test_labels, width, height)
+    train_dataset = Audio_Dataset(train_images, train_labels)
+    test_dataset = Audio_Dataset(test_images, test_labels)
     
     # 创建 PyTorch DataLoader
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)

@@ -308,7 +308,7 @@ class AudioData:
 
         # 如果文件夹存在且文件已保存，加载数据
         if os.path.exists(pkl_path):
-            self.stfts = self.load_pkl(pkl_path)
+            self.stfts = load_pkl(pkl_path)
         else:
             self.stfts = stft(self.audios, window_size=window_size, hop_size=hop_size)
             save_pkl(self.stfts,pkl_path)
@@ -328,7 +328,7 @@ class AudioData:
 
         # 如果文件夹存在且文件已保存，加载数据
         if os.path.exists(pkl_path):
-            self.mels = self.load_pkl(pkl_path)
+            self.mels = load_pkl(pkl_path)
         else:
             if self.stfts is None:
                 self.compute_stfts(window_size=window_size, hop_size=hop_size) 
