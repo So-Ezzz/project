@@ -1,10 +1,11 @@
-import os
 import numpy as np
-from scipy.io import wavfile
 import pandas as pd
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from PIL import Image
+import io
 
 # 绘制频谱图
 def plot_Spectrogram(audio_signal,title="Spectrogram"):
@@ -103,7 +104,7 @@ def plot_waveform(audio_data, fs=44100, title="Waveform"):
 
     
 # 绘制 Mel 频谱图
-def plot_mel(audio_mel,title):
+def plot_mel(audio_mel, title="mel_plot", to_img=False, height=128, width=128):
     # 创建绘图
     log_mel = librosa.power_to_db(audio_mel, ref=np.max)
 
@@ -119,4 +120,23 @@ def plot_mel(audio_mel,title):
     # 调整布局
     fig.tight_layout()
 
-    plt.show()
+    if to_img:
+        # 将Figure渲染为内存图像
+        canvas = FigureCanvas(fig)
+        buf = io.BytesIO()
+        canvas.print_png(buf)  # 保存到缓冲区
+        buf.seek(0)
+
+        # 将缓冲区内容转为Pillow图像
+        img = Image.open(buf)
+
+        # 调整图像大小
+        img_resized = img.resize((width, height))
+
+        # 关闭Figure以释放内存
+        plt.close(fig)
+
+        # 返回调整大小后的图像
+        return img_resized
+    else:
+        plt.show()
