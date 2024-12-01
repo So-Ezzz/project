@@ -294,36 +294,46 @@ class AudioData:
             self.ffts = load_pkl(pkl_path)
 
     # 计算所有音频的 STFT 特征
-    def compute_stfts(self, train_data=True, window_size=1024, hop_size=512, batch_size=512):
+    def compute_stfts(self,window_size=1024, hop_size=512):
         """
         计算所有音频的 stft 特征。
         
         参数:
             load_from_data (bool): 是否从已有数据加载（占位）。
         """
-        pkl_path = Val_stfts if self.is_validation else Train_stfts
-        if train_data: # 训练数据
-            self.stfts = stft(self.audios, window_size=window_size, hop_size=hop_size, batch_size=batch_size)
+        base_path = Val_stfts if self.is_validation else Train_stfts
+        folder_name = f"{window_size}_{hop_size}"
+        save_dir = os.path.join(base_path, folder_name)
+        pkl_path = os.path.join(save_dir, "stfts.pkl")
+
+        # 如果文件夹存在且文件已保存，加载数据
+        if os.path.exists(pkl_path):
+            self.stfts = self.load_pkl(pkl_path)
+        else:
+            self.stfts = stft(self.audios, window_size=window_size, hop_size=hop_size)
             save_pkl(self.stfts,pkl_path)
-        else: # 从数据中加载
-            self.stfts = load_pkl(pkl_path)
 
     # 计算所有音频的 mel 特征
-    def compute_mels(self, num_bins=128, train_data=True,window_size=1024, hop_size=512, batch_size=512,num_mel_bins=128):
+    def compute_mels(self,window_size=1024, hop_size=512,num_mel_bins=128):
         """
         计算所有音频的 mel 特征。
         
         参数:
             load_from_data (bool): 是否从已有数据加载（占位）。
         """
-        pkl_path = Val_mels if self.is_validation else Train_mels
-        if train_data: # 训练数据
+        base_path = Val_mels if self.is_validation else Train_mels
+        folder_name = f"{window_size}_{hop_size}_{num_mel_bins}"
+        save_dir = os.path.join(base_path, folder_name)
+        pkl_path = os.path.join(save_dir, "mels.pkl")
+
+        # 如果文件夹存在且文件已保存，加载数据
+        if os.path.exists(pkl_path):
+            self.mels = self.load_pkl(pkl_path)
+        else:
             if self.stfts is None:
-                self.compute_stfts(train_data=True, window_size=window_size, hop_size=hop_size, batch_size=batch_size) 
+                self.compute_stfts(window_size=window_size, hop_size=hop_size) 
             self.mels = mels(self.stfts, num_mel_bins = num_mel_bins)
             save_pkl(self.mels,pkl_path)
-        else: # 从数据中加载
-            self.mels = load_pkl(pkl_path)
     
     # 计算所有音频的 MFCC 特征
     def compute_mfccs(self, train_data=True):

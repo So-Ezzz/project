@@ -1,5 +1,6 @@
 import pickle
 import numpy as np
+import os
 
 def load_pkl(file_path):
     """
@@ -41,6 +42,9 @@ def save_pkl(data, file_path):
     if not isinstance(data, np.ndarray):
         raise ValueError("The input data must be a numpy.ndarray.")
     
+    save_dir = os.path.dirname(file_path)
+    os.makedirs(save_dir, exist_ok=True)
+
     try:
         data_size_gb = data.nbytes / (1024 ** 3) 
         with open(file_path, 'wb') as file:
