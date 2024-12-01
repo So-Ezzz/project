@@ -131,12 +131,15 @@ def plot_mel(audio_mel, title="mel_plot", to_img=False, height=128, width=128):
         img = Image.open(buf)
 
         # 调整图像大小
-        img_resized = img.resize((width, height))
+        img_resized = img.resize((width, height)).convert("F")  # 转为灰度图
+
+        # 转为 NumPy 数组表示
+        gray_array = np.array(img_resized)
 
         # 关闭Figure以释放内存
         plt.close(fig)
 
-        # 返回调整大小后的图像
-        return img_resized
+        # 返回灰度图的二维数组
+        return gray_array
     else:
         plt.show()

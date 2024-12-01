@@ -1,8 +1,11 @@
-import torch
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
 from ..utils.audio_data import *
 from ..utils.project_global import *
+
+import torch
+import numpy as np
+from scipy.ndimage import zoom
+from torchvision import transforms
+from torch.utils.data import Dataset, DataLoader
 
 class Audio_Dataset(Dataset):
     def __init__(self, mels, labels):
@@ -17,7 +20,6 @@ class Audio_Dataset(Dataset):
         self.labels = labels
         self.transform = transforms.Compose([  
             transforms.ToTensor(),              # 转换为PyTorch张量
-            transforms.Normalize(mean=[0.5], std=[0.5])  # 归一化
         ])
     
     def __len__(self):
@@ -35,14 +37,39 @@ def save_data(train_loader:DataLoader, test_loader, save_dir):
     
     train_data = {"mels": train_loader.dataset.mels, "labels": train_loader.dataset.labels}
     test_data = {"mels": test_loader.dataset.mels, "labels": test_loader.dataset.labels}
-    torch.save(train_data, os.path.join(save_dir, "train_data.pt"))
-    torch.save(test_data, os.path.join(save_dir, "test_data.pt"))
+    torch.save(train_data, os.path.join(save_dir, "train_data.pt"), pickle_protocol=4)
+    torch.save(test_data, os.path.join(save_dir, "test_data.pt"), pickle_protocol=4)
 
 # 加载数据
 def load_data(save_dir):
-    train_data = torch.load(os.path.join(save_dir, "train_data.pt"))
-    test_data = torch.load(os.path.join(save_dir, "test_data.pt"))
+    train_data = torch.load(os.path.join(save_dir, "train_data.pt"),pickle_module=pickle)
+    test_data = torch.load(os.path.join(save_dir, "test_data.pt"),pickle_module=pickle)
     return train_data, test_data
+
+def resize_imgs(imgs, width, height):
+    """
+    调整图片数组的大小，使用批量操作避免循环。
+    
+    参数:
+        imgs (numpy.ndarray): 输入的图片数组，形状为(N, w, h)，表示N张图片。
+        width (int): 调整后的图片宽度。
+        height (int): 调整后的图片高度。
+        
+    返回:
+        numpy.ndarray: 调整大小后的图片数组，形状为(N, height, width)。
+    """
+    if not isinstance(imgs, np.ndarray) or len(imgs.shape) != 3:
+        raise ValueError("输入必须是形状为(N, w, h)的numpy数组")
+    
+    N, original_height, original_width = imgs.shape
+    # 计算缩放比例
+    zoom_factors = (1, height / original_height, width / original_width)
+    
+    # 使用 scipy.ndimage.zoom 批量处理
+    resized_imgs = zoom(imgs, zoom_factors, order=2)
+    
+    return resized_imgs
+
 
 # 主函数：检测文件是否存在或加载
 def get_loader(window_size, hop_size, num_mel_bins, width, height, batch_size=32, shuffle=True):
@@ -54,8 +81,8 @@ def get_loader(window_size, hop_size, num_mel_bins, width, height, batch_size=32
         train_data, test_data = load_data(save_dir)
         
         # 重新构造 DataLoader
-        train_dataset = Audio_Dataset(train_data["mels"], train_data["labels"], width, height)
-        test_dataset = Audio_Dataset(test_data["mels"], test_data["labels"], width, height)
+        train_dataset = Audio_Dataset(train_data["mels"], train_data["labels"])
+        test_dataset = Audio_Dataset(test_data["mels"], test_data["labels"])
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
         
@@ -71,9 +98,12 @@ def get_loader(window_size, hop_size, num_mel_bins, width, height, batch_size=32
     Train_data.compute_mels(window_size=window_size, hop_size=hop_size, num_mel_bins=num_mel_bins)
     
     # 提取 Mel 图像和对应的标签
-    train_images = [plot_mel(mel, to_img=True, width=width, height=height) for mel in Train_data.mels]
+    # train_images = [plot_mel(mel, to_img=True, width=width, height=height) for mel in Train_data.mels]
+    
+    train_images = resize_imgs(librosa.power_to_db(Train_data.mels.transpose((0, 2, 1)), ref=np.max)[:, ::-1, :], width, height)
     train_labels = Train_data.labels
-    test_images = [plot_mel(mel, to_img=True, width=width, height=height) for mel in Val_data.mels]
+    test_images = resize_imgs(librosa.power_to_db(Val_data.mels.transpose((0, 2, 1)), ref=np.max)[:, ::-1, :], width, height)
+    # test_images = [plot_mel(mel, to_img=True, width=width, height=height) for mel in Val_data.mels]
     test_labels = Val_data.labels
     
     # 创建 PyTorch 数据集
