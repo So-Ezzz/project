@@ -46,7 +46,7 @@ class Audio:
 
     # 计算stft
     def get_stft(self,windowsize=1024,hopsize=512):
-        self.stft = compute_stft(self.audio,window_size=windowsize,hop_size=hopsize, use_library=True)
+        self.stft = stft(self.audio,window_size=windowsize,hop_size=hopsize, use_library=True)
 
     # 计算mel
     def get_mel(self,windowsize=1024,hopsize=512,n_mels=128):
@@ -231,7 +231,7 @@ class AudioData:
             audios.append(audio)
             labels.append(file)
 
-        return cls(labels=np.array(labels),audios=np.array(audios), is_validation=is_validation)
+        return cls(labels=np.array(labels),audios=np.array(audios, dtype=np.float32), is_validation=is_validation)
 
     def add_top20_features(self, label, fft_top20=None, stft_top20=None, mfcc_top20=None):
         """
@@ -294,7 +294,7 @@ class AudioData:
             self.ffts = load_pkl(pkl_path)
 
     # 计算所有音频的 STFT 特征
-    def compute_stfts(self,window_size=1024, hop_size=512):
+    def compute_stfts(self,window_size=1024, hop_size=512,use_library=False):
         """
         计算所有音频的 stft 特征。
         
@@ -310,11 +310,14 @@ class AudioData:
         if os.path.exists(pkl_path):
             self.stfts = load_pkl(pkl_path)
         else:
-            self.stfts = stft(self.audios, window_size=window_size, hop_size=hop_size)
-            save_pkl(self.stfts,pkl_path)
+            if use_library:
+                return stft_lib(self.audios, fs=44100, window_size=window_size, hop_size=hop_size)
+            else:
+                self.stfts = stft(self.audios, window_size=window_size, hop_size=hop_size,use_library=True)
+                save_pkl(self.stfts,pkl_path)
 
     # 计算所有音频的 mel 特征
-    def compute_mels(self,window_size=1024, hop_size=512,num_mel_bins=128):
+    def compute_mels(self,window_size=1024, hop_size=512,num_mel_bins=128,use_library=False):
         """
         计算所有音频的 mel 特征。
         
@@ -330,10 +333,14 @@ class AudioData:
         if os.path.exists(pkl_path):
             self.mels = load_pkl(pkl_path)
         else:
-            if self.stfts is None:
-                self.compute_stfts(window_size=window_size, hop_size=hop_size) 
-            self.mels = mels(self.stfts, num_mel_bins = num_mel_bins)
-            save_pkl(self.mels,pkl_path)
+            if use_library:
+                return librosa.feature.melspectrogram(y=self.audios, sr=44100, n_fft=window_size, hop_length=hop_size, 
+                                                      n_mels=num_mel_bins, power=1.0)
+            else:
+                if self.stfts is None:
+                    self.compute_stfts(window_size=window_size, hop_size=hop_size) 
+                self.mels = mels(self.stfts, num_mel_bins = num_mel_bins)
+                save_pkl(self.mels,pkl_path)
     
     # 计算所有音频的 MFCC 特征
     def compute_mfccs(self, train_data=True):
