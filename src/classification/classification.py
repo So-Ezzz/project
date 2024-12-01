@@ -7,7 +7,7 @@ from scipy.ndimage import zoom
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 
-class Audio_Dataset(Dataset):
+class AudioDataset(Dataset):
     def __init__(self, mels, labels):
         """
         Args:
@@ -71,18 +71,50 @@ def resize_imgs(imgs, width, height):
     return resized_imgs
 
 
+def norm_lufs(x, lufs=-14.0, clip=1.0):
+    """
+    对梅尔频谱批量进行 LUFS 响度归一化，并返回以 dB 为单位的对数梅尔频谱。
+    
+    参数:
+    - x: 输入梅尔频谱，形状为 (N, mel_bins, num_frames)，值为线性幅度
+    - sr: 采样率，默认22050 Hz
+    - lufs: 目标 LUFS，默认-14
+    - clip: 削波范围，默认1.0
+    
+    返回:
+    - 归一化后的对数梅尔频谱 (单位：dB)
+    """
+    # 计算每个频谱的整体能量
+    p = np.sum(x**2, axis=(1, 2))  # 批量计算每个样本的能量
+    cur_lufs = 10 * np.log10(p + 1e-10) - 10  # 当前 LUFS
+    
+    # 计算批量增益因子
+    gain = 10 ** ((lufs - cur_lufs) / 20.0)
+    gain = gain[:, np.newaxis, np.newaxis]  # 调整增益维度以匹配输入
+    print(gain)
+    
+    # 应用增益因子
+    x = x * gain  # 批量归一化
+    x = np.clip(x, -clip, clip)  # 削波处理
+    
+    # 转换为对数梅尔频谱 (dB)
+    db_spectrogram = librosa.power_to_db(x, ref=np.max)
+    return db_spectrogram
+
+
+
 # 主函数：检测文件是否存在或加载
-def get_loader(window_size, hop_size, num_mel_bins, width, height, batch_size=32, shuffle=True):
+def get_loader(window_size, hop_size, num_mel_bins, width, height, lufs=-14.0, batch_size=32, shuffle=True):
     # 定义保存路径
-    save_dir = f"data/processed/{window_size}_{hop_size}_{num_mel_bins}_{width}_{height}"
+    save_dir = f"data/processed/{window_size}_{hop_size}_{num_mel_bins}_{width}_{height}_{lufs}"
     
     if os.path.exists(os.path.join(save_dir, "train_data.pt")):
         print(f"Loading data from {save_dir}...")
         train_data, test_data = load_data(save_dir)
         
         # 重新构造 DataLoader
-        train_dataset = Audio_Dataset(train_data["mels"], train_data["labels"])
-        test_dataset = Audio_Dataset(test_data["mels"], test_data["labels"])
+        train_dataset = AudioDataset(train_data["mels"], train_data["labels"])
+        test_dataset = AudioDataset(test_data["mels"], test_data["labels"])
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
         
@@ -100,15 +132,15 @@ def get_loader(window_size, hop_size, num_mel_bins, width, height, batch_size=32
     # 提取 Mel 图像和对应的标签
     # train_images = [plot_mel(mel, to_img=True, width=width, height=height) for mel in Train_data.mels]
     
-    train_images = resize_imgs(librosa.power_to_db(Train_data.mels.transpose((0, 2, 1)), ref=np.max)[:, ::-1, :], width, height)
+    train_images = resize_imgs(norm_lufs(Train_data.mels.transpose((0, 2, 1)), lufs=lufs)[:, ::-1, :], width, height)
     train_labels = Train_data.labels
-    test_images = resize_imgs(librosa.power_to_db(Val_data.mels.transpose((0, 2, 1)), ref=np.max)[:, ::-1, :], width, height)
+    test_images = resize_imgs(norm_lufs(Val_data.mels.transpose((0, 2, 1)), lufs=lufs)[:, ::-1, :], width, height)
     # test_images = [plot_mel(mel, to_img=True, width=width, height=height) for mel in Val_data.mels]
     test_labels = Val_data.labels
     
     # 创建 PyTorch 数据集
-    train_dataset = Audio_Dataset(train_images, train_labels)
-    test_dataset = Audio_Dataset(test_images, test_labels)
+    train_dataset = AudioDataset(train_images, train_labels)
+    test_dataset = AudioDataset(test_images, test_labels)
     
     # 创建 PyTorch DataLoader
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
