@@ -311,7 +311,7 @@ class AudioData:
             self.stfts = load_pkl(pkl_path)
         else:
             if use_library:
-                return stft_lib(self.audios, fs=44100, window_size=window_size, hop_size=hop_size)
+                self.stfts =  stft_lib(self.audios, fs=44100, window_size=window_size, hop_size=hop_size)
             else:
                 self.stfts = stft(self.audios, window_size=window_size, hop_size=hop_size,use_library=True)
                 save_pkl(self.stfts,pkl_path)
@@ -334,7 +334,7 @@ class AudioData:
             self.mels = load_pkl(pkl_path)
         else:
             if use_library:
-                return librosa.feature.melspectrogram(y=self.audios, sr=44100, n_fft=window_size, hop_length=hop_size, 
+                self.mels =  librosa.feature.melspectrogram(y=self.audios, sr=44100, n_fft=window_size, hop_length=hop_size, 
                                                       n_mels=num_mel_bins, power=1.0)
             else:
                 if self.stfts is None:
