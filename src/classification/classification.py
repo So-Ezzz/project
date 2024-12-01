@@ -94,8 +94,8 @@ def get_loader(window_size, hop_size, num_mel_bins, width, height, batch_size=32
     Train_data = AudioData.load_data(Train_set_path)
     
     # 计算 Mel 图像
-    Val_data.compute_mels(window_size=window_size, hop_size=hop_size, num_mel_bins=num_mel_bins)
-    Train_data.compute_mels(window_size=window_size, hop_size=hop_size, num_mel_bins=num_mel_bins)
+    Val_data.compute_mels(window_size=window_size, hop_size=hop_size, num_mel_bins=num_mel_bins,use_library=True)
+    Train_data.compute_mels(window_size=window_size, hop_size=hop_size, num_mel_bins=num_mel_bins,use_library=True)
     
     # 提取 Mel 图像和对应的标签
     # train_images = [plot_mel(mel, to_img=True, width=width, height=height) for mel in Train_data.mels]
